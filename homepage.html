@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homepage</title>
+</head>
+<body>
+    <h1>Welcome!</h1>
+    <p>Please tell us your mood:</p>
+    <form hx-post="http://localhost:7071/api/MoodFunction" hx-target="#response" hx-swap="innerHTML" hx-headers='{"Content-Type": "application/json"}'>
+        <label for="mood">Mood:</label>
+        <input type="text" id="mood" name="mood" required>
+        <button type="submit">Submit Mood</button>
+    </form>
+    <div id="response" style="margin-top: 20px;"></div>
+</body>
+</html>

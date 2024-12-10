@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Sign-In</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+</head>
+<body>
+    <h1>Sign In</h1>
+    <form hx-post="http://localhost:7071/api/SignInFunction" hx-target="#response" hx-swap="innerHTML" hx-headers='{"Content-Type": "application/json"}'>
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br><br>
+        <button type="submit">Sign In</button>
+    </form>
+    <div id="response" style="margin-top: 20px;"></div>
+
+    <script>
+        document.addEventListener('htmx:afterOnLoad', function (event) {
+            const response = JSON.parse(event.detail.xhr.responseText);
+            if (response.redirect_url) {
+                window.location.href = response.redirect_url;
+            }
+        });
+    </script>
+</body>
+</html>
