@@ -8,8 +8,8 @@
 </head>
 
 <body>
-     <h1>Register a New User</h1>
-     <form id="register-form" onsubmit="submitForm(event)">
+    <h1>Register a New User</h1>
+    <form id="register-form" onsubmit="submitForm(event)">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
         <br><br>
@@ -40,28 +40,24 @@
             })
             .then(response => {
                 if (response.ok) {
-                    return response.text();
+                    return response.json();
+                } else if (response.status === 409) {
+                    throw new Error("This username is already taken. Please choose a different one.");
                 } else {
-                    throw new Error("Error: " + response.statusText);
+                    throw new Error("An unexpected error occurred.");
                 }
             })
             .then(data => {
-                document.getElementById('response').innerHTML = `<p>${data}</p>`;
+                if (data.redirect) {
+                    window.location.href = data.redirect; // Redirect to the sign-in page
+                } else if (data.message) {
+                    document.getElementById('response').innerText = data.message;
+                }
             })
             .catch(error => {
                 document.getElementById('response').innerHTML = `<p style="color: red;">${error.message}</p>`;
             });
         }
-
-        function handleRedirect(event) {
-            const response = JSON.parse(event.detail.xhr.responseText);
-            if (response.redirect) {
-                window.location.href = response.redirect;
-            } else if (response.message) {
-                document.getElementById('response').innerText = response.message;
-            }
-        }
     </script>
-    
-
+</body>
 </html>
