@@ -55,6 +55,7 @@ def register_user(req: func.HttpRequest) -> func.HttpResponse:
             "PartitionKey": "Users",
             "RowKey": username,
             "Password": hashed_password.decode("utf-8"),
+            "IsFirstSignIn": True #flag for first time sign-in setup
         }
 
         table_client.create_entity(entity)
@@ -71,54 +72,103 @@ def register_user(req: func.HttpRequest) -> func.HttpResponse:
 
 @app.route(route="SignInFunction", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 def sign_in_user(req: func.HttpRequest) -> func.HttpResponse:
-    logging.info("Processing a request for user sign-in")
+    logging.info("Processing sign-in request.")
 
     try:
         req_body = req.get_json()
-        logging.info(f"Received request body: {req_body}")
         username = req_body.get("username")
         password = req_body.get("password")
-    except ValueError:
-        return func.HttpResponse("Invalid input", status_code=400)
 
-    if not username or not password:
-        return func.HttpResponse("Username and password required.", status_code=400)
+        if not username or not password:
+            return func.HttpResponse("Missing required fields.", status_code=400)
 
-    try:
-        # Connect to Azurite Table Storage
-        table_service_client = TableServiceClient.from_connection_string(STORAGE_CONNECTION_STRING)
-        table_client = table_service_client.get_table_client(TABLE_NAME)
+        # Simulate checking user in the database
+        user_exists = True  # Example; replace with actual DB check
 
-        # Check if the user exists
-        try:
-            user_entity = table_client.get_entity(partition_key="Users", row_key=username)
+        if user_exists:
+            # Simulate checking if it's the user's first time logging in
+            is_first_sign_in = True  # Example; replace with actual check
 
-            # Verify the password
-            stored_password = user_entity["Password"]
-            if bcrypt.checkpw(password.encode("utf-8"), stored_password.encode("utf-8")):
-                # Redirect to the homepage
+            if is_first_sign_in:
+                # If it's the first sign-in, return the redirect response
                 return func.HttpResponse(
-                    '{"message": "Sign-in successful!", "redirect_url": "/homepage"}',
+                    '{"redirect": "/setup.html"}',
                     status_code=200,
                     mimetype="application/json"
                 )
             else:
+                # If not first sign-in, return a success message
                 return func.HttpResponse(
-                    '{"message": "Invalid username or password."}',
-                    status_code=401,
+                    '{"message": "Sign-in successful!"}',
+                    status_code=200,
                     mimetype="application/json"
                 )
-        except Exception:
-            return func.HttpResponse(
-                '{"message": "Invalid username or password."}',
-                status_code=401,
-                mimetype="application/json"
-            )
+
+        else:
+            return func.HttpResponse("User not found.", status_code=404)
 
     except Exception as e:
         logging.error(f"Error during sign-in: {e}")
         return func.HttpResponse(
-            '{"message": "An error occurred while signing in."}',
+            f'{{"message": "An error occurred: {str(e)}"}}',
+            status_code=500,
+            mimetype="application/json"
+        )
+
+
+@app.route(route="CompleteSetupFunction", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
+def complete_setup(req: func.HttpRequest) -> func.HttpResponse:
+    logging.info("Processing setup completion request.")
+
+    try:
+        # Parse the incoming JSON body
+        req_body = req.get_json()
+        username = req_body.get("username")
+        name = req_body.get("name")
+        email = req_body.get("email")
+
+        if not username or not name or not email:
+            return func.HttpResponse("Missing required fields.", status_code=400)
+
+        logging.info(f"Received setup completion for username: {username}")
+
+        # Connect to Azure Table Storage
+        table_service_client = TableServiceClient.from_connection_string(STORAGE_CONNECTION_STRING)
+        table_client = table_service_client.get_table_client(TABLE_NAME)
+
+        # Prepare the user entity data to be inserted or updated
+        user_entity = {
+            "PartitionKey": "Users",  # Partition key (all users will be in this partition)
+            "RowKey": username,  # Row key (unique identifier for the user)
+            "Name": name,  # Store the name
+            "Email": email,  # Store the email
+            "IsFirstSignIn": False  # Mark that the user has completed the setup
+        }
+
+        # Insert or update the user entity
+        try:
+            # This will insert the entity if it does not exist or update it if it already exists
+            table_client.upsert_entity(user_entity)
+            logging.info(f"User setup successfully completed for {username}.")
+        except Exception as e:
+            logging.error(f"Error saving user entity: {e}")
+            return func.HttpResponse(
+                f'{{"message": "An error occurred while saving user data: {str(e)}"}}',
+                status_code=500,
+                mimetype="application/json"
+            )
+
+        # Return a successful response after completion
+        return func.HttpResponse(
+            '{"message": "Setup completed successfully!"}',
+            status_code=200,
+            mimetype="application/json"
+        )
+
+    except Exception as e:
+        logging.error(f"Error during setup completion: {e}")
+        return func.HttpResponse(
+            f'{{"message": "An error occurred: {str(e)}"}}',
             status_code=500,
             mimetype="application/json"
         )

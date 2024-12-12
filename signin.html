@@ -8,7 +8,7 @@
 </head>
 <body>
     <h1>Sign In</h1>
-    <form hx-post="http://localhost:7071/api/SignInFunction" hx-target="#response" hx-swap="innerHTML" hx-headers='{"Content-Type": "application/json"}'>
+    <form id="signin-form" onsubmit="submitSignIn(event)">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required>
         <br><br>
@@ -19,46 +19,48 @@
     </form>
     <div id="response" style="margin-top: 20px;"></div>
 
-    <script> 
-    document.addEventListener("submit", function(event) {
-        event.preventDefault(); // Prevent the default form submission
-        
-        const formData = {
-            username: document.getElementById("username").value,
-            password: document.getElementById("password").value,
-        };
+    <script>
+        function submitSignIn(event) {
+            event.preventDefault(); // Prevent the default form submission
 
-        fetch('http://localhost:7071/api/SignInFunction', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(formData),
-        })
-        .then(async response => {
-            const contentType = response.headers.get('Content-Type');
-            
-            if (response.ok) {
-                if (contentType && contentType.includes('application/json')) {
-                    const data = await response.json();
-                    if (data.redirect) {
-                        window.location.href = data.redirect; // Redirect if instructed
+            const formData = {
+                username: document.getElementById("username").value,
+                password: document.getElementById("password").value,
+            };
+
+            fetch('http://localhost:7071/api/SignInFunction', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(formData),
+            })
+            .then(async (response) => {
+                console.log('Response:', response);  // Log the full response object for debugging
+                const contentType = response.headers.get('Content-Type');
+                if (response.ok) {
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await response.json();
+                        console.log('Response Data:', data);  // Log the response data for debugging
+
+                        if (data.redirect) {
+                            window.location.href = data.redirect;  // Redirect if instructed
+                        } else {
+                            document.getElementById('response').innerText = data.message || "Sign-in successful!";
+                        }
                     } else {
-                        document.getElementById('response').innerText = data.message || "Sign-in successful!";
+                        const text = await response.text();
+                        document.getElementById('response').innerText = text || "Sign-in successful!";
                     }
                 } else {
-                    const text = await response.text();
-                    document.getElementById('response').innerText = text || "Sign-in successful!";
+                    const errorText = await response.text();
+                    document.getElementById('response').innerHTML = `<p style="color: red;">${errorText}</p>`;
                 }
-            } else {
-                const errorText = await response.text();
-                document.getElementById('response').innerHTML = `<p style="color: red;">${errorText}</p>`;
-            }
-        })
-        .catch(error => {
-            document.getElementById('response').innerHTML = `<p style="color: red;">${error.message}</p>`;
-        });
-    });
+            })
+            .catch((error) => {
+                document.getElementById('response').innerHTML = `<p style="color: red;">${error.message}</p>`;
+            });
+        }
     </script>
 </body>
 </html>
